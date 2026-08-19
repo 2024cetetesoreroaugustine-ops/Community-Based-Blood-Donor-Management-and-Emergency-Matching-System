@@ -1,74 +1,316 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Community-Based Blood Donor Management and Emergency Matching System</title>
-
-    <link rel="stylesheet"
-          href="css/style.css">
-
-
+    <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
 
 <div class="overlay">
-
     <header>
-
-        <img src="images/city-health-logo.png"
-     alt="City Health Office Logo"
-     class="logo">
-            
+        <img src="images/city-health-logo.png" alt="City Health Office Logo" class="logo">
         <h2>City Health Office</h2>
-
     </header>
 
-    <main>
+    <main class="hero-section">
+        <h1>Community-Based Blood Donor Management and Emergency Matching System</h1>
+        
+        <!-- System Entry Portals -->
+        <div id="landingCards" class="card-container">
+            <div class="action-card">
+                <h3>System User Portal</h3>
+                <p>Sign in to access your dashboard according to your registered system role.</p>
+                <button class="btn-primary" onclick="openModal('loginModal')">Login</button>
+            </div>
 
-        <h1>
-            Community-Based Blood Donor Management
-            and Emergency Matching System
-        </h1>
+            <div class="action-card">
+                <h3>Account Registration</h3>
+                <p>Create a system account for Volunteer Donors, Hospital Staff, BHW, or Admins.</p>
+                <button class="btn-secondary" onclick="openModal('unifiedRegisterModal')">Create Account / Sign Up</button>
+            </div>
+        </div>
 
-        <p>
+        <!-- DYNAMIC ROLE-BASED DASHBOARD CONTAINER -->
+        <div id="dashboardSection" class="dashboard-container" style="display: none;">
+            <div class="dashboard-header">
+                <div>
+                    <h2 id="welcomeUserMsg">System Portal</h2>
+                    <span id="roleBadge" class="badge badge-role">Role</span>
+                </div>
+                <button class="btn-logout" onclick="handleLogout()">Logout</button>
+            </div>
 
-            Welcome!
+            <!-- Role Action Toolbar -->
+            <div id="roleActionToolbar" class="action-toolbar">
+                <!-- Action buttons rendered dynamically per role -->
+            </div>
 
-            The Community-Based Blood Donor Management and Emergency Matching
-            System is a web-based platform designed to connect volunteer blood
-            donors, hospitals, barangay health workers, and the City Health
-            Office for faster emergency blood donor matching and coordination.
-        </p>
+            <!-- Dynamic Tables Section -->
+            <div id="tablesSection" class="tables-section">
+                
+                <!-- 1. Volunteer Donors Table -->
+                <div id="cardDonors" class="table-card">
+                    <h3>Registered Volunteer Donors</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Donor ID</th>
+                                    <th>Name</th>
+                                    <th>Sex</th>
+                                    <th>Birth Date</th>
+                                    <th>Phone</th>
+                                    <th>Email</th>
+                                    <th>Barangay</th>
+                                    <th>Blood Type</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="donorTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
 
-        <button>
+                <!-- 2. Emergency Blood Requests Table -->
+                <div id="cardRequests" class="table-card">
+                    <h3>Emergency Blood Requests & Matches</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>REQ ID</th>
+                                    <th>Patient Name</th>
+                                    <th>Qty Needed</th>
+                                    <th>Request Date</th>
+                                    <th>Status</th>
+                                    <th>Blood Type</th>
+                                    <th>Hospital</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requestTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
 
-            Get Started
+                <!-- 3. Blood Drives Table -->
+                <div id="cardBloodDrives" class="table-card">
+                    <h3>Community Blood Drives</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Drive ID</th>
+                                    <th>Event Name</th>
+                                    <th>Location</th>
+                                    <th>Schedule Date</th>
+                                    <th>Barangay</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="driveTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
 
-        </button>
+                <!-- 4. System Notifications Table -->
+                <div id="cardNotifications" class="table-card">
+                    <h3>System Alerts & Notifications</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Notif ID</th>
+                                    <th>Message</th>
+                                    <th>Sent Date</th>
+                                    <th>Recipient ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="notificationTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
 
     </main>
 
     <footer>
-
-        Developed by:
-
-        Augustine Raf L. Tesorero,
-        Petnaryson T. Vallecera,
-        Rex Joshua S. Del Rosario
-
+        Developed by: Augustine Raf L. Tesorero, Petnaryson T. Vallecera, Rex Joshua S. Del Rosario
     </footer>
+</div>
 
+<!-- SYSTEM LOGIN MODAL -->
+<div id="loginModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('loginModal')">&times;</span>
+        <h2>System Access Login</h2>
+        <form onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="loginRole">System Role:</label>
+                <select id="loginRole" required>
+                    <option value="">-- Select Role --</option>
+                    <option value="1">City Health Office Admin</option>
+                    <option value="2">Hospital Staff</option>
+                    <option value="3">Barangay Health Worker</option>
+                    <option value="4">Volunteer Blood Donor</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="loginUsername">Username:</label>
+                <input type="text" id="loginUsername" placeholder="Enter username" required>
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Password:</label>
+                <input type="password" id="loginPassword" placeholder="Enter password" required>
+            </div>
+            <button type="submit" class="btn-submit">Login</button>
+        </form>
+    </div>
+</div>
+
+<!-- UNIFIED SIGN UP / ACCOUNT REGISTRATION MODAL -->
+<div id="unifiedRegisterModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('unifiedRegisterModal')">&times;</span>
+        <h2>Create System Account</h2>
+        <form onsubmit="handleUnifiedRegister(event)">
+            <div class="form-group">
+                <label for="userRoleSelect">Select Account Type:</label>
+                <select id="userRoleSelect" onchange="toggleRoleFields()" required>
+                    <option value="">-- Select Role --</option>
+                    <option value="4">Volunteer Blood Donor</option>
+                    <option value="2">Hospital Staff</option>
+                    <option value="3">Barangay Health Worker (BHW)</option>
+                    <option value="1">City Health Office Admin</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="regUsername">Username:</label>
+                    <input type="text" id="regUsername" placeholder="Enter username" required>
+                </div>
+                <div class="form-group half">
+                    <label for="regPassword">Password:</label>
+                    <input type="password" id="regPassword" placeholder="Enter password" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="barangaySelect">Barangay Location:</label>
+                <select id="barangaySelect" required>
+                    <option value="">-- Select Barangay --</option>
+                    <option value="1">Apopong</option>
+                    <option value="2">Labangal</option>
+                    <option value="3">Calumpang</option>
+                </select>
+            </div>
+
+            <!-- Donor Specific Fields -->
+            <div id="donorFields" class="role-specific-section" style="display: none;">
+                <h3>Donor Profile Information</h3>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="donorFirstName">First Name:</label>
+                        <input type="text" id="donorFirstName">
+                    </div>
+                    <div class="form-group half">
+                        <label for="donorMiddleName">Middle Name:</label>
+                        <input type="text" id="donorMiddleName">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="donorLastName">Last Name:</label>
+                    <input type="text" id="donorLastName">
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="donorSex">Sex:</label>
+                        <select id="donorSex">
+                            <option value="M">Male</option>
+                            <option value="F">Female</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label for="donorBirthDate">Birth Date:</label>
+                        <input type="date" id="donorBirthDate">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="donorPhone">Phone Number:</label>
+                        <input type="tel" id="donorPhone">
+                    </div>
+                    <div class="form-group half">
+                        <label for="donorEmail">Email Address:</label>
+                        <input type="email" id="donorEmail">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="bloodTypeSelect">Blood Type:</label>
+                    <select id="bloodTypeSelect">
+                        <option value="1">O+</option>
+                        <option value="2">A-</option>
+                        <option value="3">B+</option>
+                        <option value="4">AB+</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Hospital Staff Fields -->
+            <div id="hospitalFields" class="role-specific-section" style="display: none;">
+                <h3>Hospital Profile Information</h3>
+                <div class="form-group">
+                    <label for="hospitalName">Hospital Name:</label>
+                    <input type="text" id="hospitalName">
+                </div>
+                <div class="form-group">
+                    <label for="hospitalAddress">Address:</label>
+                    <input type="text" id="hospitalAddress">
+                </div>
+                <div class="form-group">
+                    <label for="hospitalContact">Contact Number:</label>
+                    <input type="tel" id="hospitalContact">
+                </div>
+            </div>
+
+            <!-- BHW Fields -->
+            <div id="bhwFields" class="role-specific-section" style="display: none;">
+                <h3>Barangay Health Worker Details</h3>
+                <div class="form-group">
+                    <label for="bhwFullName">Full Name:</label>
+                    <input type="text" id="bhwFullName">
+                </div>
+                <div class="form-group">
+                    <label for="bhwPhone">Contact Number:</label>
+                    <input type="tel" id="bhwPhone">
+                </div>
+            </div>
+
+            <!-- CHO Admin Fields -->
+            <div id="choFields" class="role-specific-section" style="display: none;">
+                <h3>CHO Administrator Details</h3>
+                <div class="form-group">
+                    <label for="adminFullName">Administrator Name:</label>
+                    <input type="text" id="adminFullName">
+                </div>
+                <div class="form-group">
+                    <label for="adminContact">Official Phone Number:</label>
+                    <input type="tel" id="adminContact">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Submit Registration</button>
+        </form>
+    </div>
 </div>
 
 <script src="js/script.js"></script>
-
 </body>
-
 </html>
