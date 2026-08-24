@@ -1,4 +1,4 @@
-// DATABASE SYSTEM STATE
+// DATABASE SYSTEM STATE (MATCHED TO DIAGRAM ENTITIES)
 const state = {
     currentRole: "1",
     currentUser: "admin",
@@ -6,25 +6,60 @@ const state = {
     latestRequestBloodTypeId: null,
     latestRequestBarangayId: null,
 
+    // USERS Entity
     accounts: [
-        { UserID: 1, Username: "admin", Password: "123", ROLES_RoleID: "1", roleName: "City Health Office Admin", active: true },
-        { UserID: 2, Username: "staff", Password: "123", ROLES_RoleID: "2", roleName: "Hospital Staff", active: true },
-        { UserID: 3, Username: "bhw", Password: "123", ROLES_RoleID: "3", roleName: "Barangay Health Worker", active: true }
+        { UserID: 1, Username: "admin", Password: "123", ROLES_RoleID: "1", roleName: "City Health Office Admin", active: true,
+          entityData: { admin_id: 100, FIR_name: "System", LST_name: "Administrator", USERS_UserID: 1 } },
+        { UserID: 2, Username: "staff", Password: "123", ROLES_RoleID: "2", roleName: "Hospital Staff", active: true,
+          entityData: { Hospital_id: 501, Hospital_name: "General Santos City Hospital", ADD: "National Highway", CTT_number: "0830000000", USERS_UserID: 2, BARANGAY_BarangayID: "7" } },
+        { UserID: 3, Username: "bhw", Password: "123", ROLES_RoleID: "3", roleName: "Barangay Health Worker", active: true,
+          entityData: { Worker_id: 800, FIR_name: "Sample", LST_name: "Worker", CTT_number: "0830000001", USERS_UserID: 3, BARANGAY_BarangayID: "1" } }
     ],
 
+    // Relational Tables
     donors: [],
     requests: [],
     drives: [],
     notifications: [],
-    donations: [],
-    donorMatches: [],
-    donorVerifications: [],
-    driveParticipation: []
+    donorMatches: [],          // ER: donor_Match — one record per dispatched match/response
+    donations: [],             // ER: Blood_Drive_PAR-adjacent donation records
+    donorVerifications: [],    // ER: DONOR_VERIFICATION — audit trail of verification actions
+    driveParticipation: []     // ER: BLOOD_DRIVE_PAR — donor sign-ups for scheduled drives
 };
 
-const bloodTypeMap = { "1": "A+", "2": "A-", "3": "B+", "4": "B-", "5": "O+", "6": "O-", "7": "AB+", "8": "AB-" };
-const barangayMap = { "1": "Apopong", "2": "Baluan", "3": "Bula", "4": "Calumpang", "5": "City Heights", "6": "Labangal", "7": "Lagao", "8": "San Isidro" };
+// Blood Type ID mapping
+const bloodTypeMap = {
+    "1": "A+", "2": "A-", "3": "B+", "4": "B-",
+    "5": "O+", "6": "O-", "7": "AB+", "8": "AB-"
+};
 
+// Barangay ID mapping (ER: BARANGAY)
+const barangayMap = {
+    "1": "Apopong", "2": "Baluan", "3": "Bula", "4": "Calumpang",
+    "5": "City Heights", "6": "Labangal", "7": "Lagao", "8": "San Isidro"
+};
+
+// ── ERD-ALIGNED LOOKUP HELPERS ──────────────────────────────────────────
+// These read FK relationships exactly as drawn in the ER Diagram, instead of
+// relying on hardcoded IDs or plain-text role labels.
+
+// USERS.UserID -> account (and its role-specific entity record: CIT_Health_OFF_ADM / Hospital_STF / Barangay_Health_Worker)
+function getAccountByUserId(userId) {
+    return state.accounts.find(a => a.UserID === userId);
+}
+
+// Currently logged-in account's own USERS row
+function getCurrentAccount() {
+    return state.accounts.find(a => a.Username === state.currentUser);
+}
+
+// Hospital_STF.Hospital_id -> owning account (via entityData.Hospital_id), used to resolve
+// EMG_Blood_REQ.Hospital_STF_Hospital_id back to a USERS_UserID for NOTIFICATION targeting
+function getAccountByHospitalId(hospitalId) {
+    return state.accounts.find(a => a.entityData && a.entityData.Hospital_id === hospitalId);
+}
+
+// Icon set (presentation only — inline SVG markup keyed by sidebar module)
 const ICONS = {
     home: '<svg class="icon" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5.5 10v9A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5v-9"/></svg>',
     donors: '<svg class="icon" viewBox="0 0 24 24"><path d="M8 2.5h8a1 1 0 0 1 1 1V5H7V3.5a1 1 0 0 1 1-1Z"/><rect x="5" y="5" width="14" height="16.5" rx="2"/><path d="M9 11h6M9 14.5h6M9 18h4"/></svg>',
@@ -33,13 +68,16 @@ const ICONS = {
     drives: '<svg class="icon" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9.5h16M8 3v3.5M16 3v3.5"/></svg>',
     users: '<svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.7-3.4 3-5.3 5.5-5.3s4.8 1.9 5.5 5.3"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15.5 14.9c2.2.3 3.9 2.1 4.5 5.1"/></svg>',
     reports: '<svg class="icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M20 20H4"/></svg>',
-    profile: '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c1-4.2 3.8-6.5 7.5-6.5s6.5 2.3 7.5 6.5"/></svg>'
+    profile: '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c1-4.2 3.8-6.5 7.5-6.5s6.5 2.3 7.5 6.5"/></svg>',
+    bell: '<svg class="icon" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 5.5-2 7-2 7h16s-2-1.5-2-7"/><path d="M10.5 19a1.7 1.7 0 0 0 3 0"/></svg>'
 };
 
-document.addEventListener("DOMContentLoaded", () => { initEvents(); });
+document.addEventListener("DOMContentLoaded", () => {
+    initEvents();
+});
 
 function initEvents() {
-    document.getElementById("linkOpenStaffRegister")?.addEventListener("click", (e) => {
+    document.getElementById("linkOpenStaffRegister").addEventListener("click", (e) => {
         e.preventDefault();
         document.getElementById("staffRegisterModal").style.display = "flex";
     });
@@ -52,8 +90,15 @@ function initEvents() {
 
         const match = state.accounts.find(a => a.Username === user && a.Password === pass && a.ROLES_RoleID === role);
 
-        if (!match) { alert("Invalid Credentials! Check username, password, or role."); return; }
-        if (match.active === false) { alert("This account has been deactivated."); return; }
+        if (!match) {
+            alert("Invalid Credentials! Check your username, password, or account role.");
+            return;
+        }
+
+        if (match.active === false) {
+            alert("This account has been deactivated by the City Health Office Admin. Please contact your administrator.");
+            return;
+        }
 
         state.currentRole = role;
         state.currentUser = match.Username;
@@ -79,16 +124,22 @@ function initEvents() {
         });
     });
 
-    document.getElementById("btnBhwRegisterDonor")?.addEventListener("click", () => {
+    document.getElementById("btnBhwRegisterDonor").addEventListener("click", () => {
         document.getElementById("bhwDonorRegisterModal").style.display = "flex";
     });
 
-    document.getElementById("btnReqModuleAdd")?.addEventListener("click", () => {
+    document.getElementById("btnReqModuleAdd").addEventListener("click", () => {
         document.getElementById("requestModal").style.display = "flex";
     });
 
-    document.getElementById("btnDriveModuleAdd")?.addEventListener("click", () => {
+    document.getElementById("btnDriveModuleAdd").addEventListener("click", () => {
         document.getElementById("driveModal").style.display = "flex";
+    });
+
+    document.getElementById("btnEditDonorProfile").addEventListener("click", openEditDonorProfile);
+
+    document.getElementById("btnAdminCreateAccount").addEventListener("click", () => {
+        document.getElementById("staffRegisterModal").style.display = "flex";
     });
 
     document.getElementById("formStaffRegister").addEventListener("submit", handleStaffRegister);
@@ -96,19 +147,35 @@ function initEvents() {
     document.getElementById("formEmergencyRequest").addEventListener("submit", handleEmergencyRequest);
     document.getElementById("formBloodDrive").addEventListener("submit", handleBloodDrive);
     document.getElementById("formEditUser").addEventListener("submit", handleEditUser);
-    document.getElementById("formUpdateProfile")?.addEventListener("submit", handleUpdateProfile);
+    document.getElementById("formEditDonorProfile").addEventListener("submit", handleEditDonorProfile);
+    document.getElementById("formEditDrive").addEventListener("submit", handleEditDrive);
 
-    document.getElementById("filterSameBarangay")?.addEventListener("change", renderMatchedDonorsTable);
+    const barangayFilter = document.getElementById("filterSameBarangay");
+    if (barangayFilter) {
+        barangayFilter.addEventListener("change", renderMatchedDonorsTable);
+    }
 }
 
+// TOGGLE FIELDS IN REGISTRATION FORM
 function toggleRoleFormFields() {
     const role = document.getElementById("staffRegRole").value;
-    document.getElementById("choFieldsGroup").style.display = (role === "1") ? "block" : "none";
-    document.getElementById("hospitalFieldsGroup").style.display = (role === "2") ? "block" : "none";
-    document.getElementById("bhwFieldsGroup").style.display = (role === "3") ? "block" : "none";
-    document.getElementById("donorFieldsGroup").style.display = (role === "4") ? "block" : "none";
+    const choGroup = document.getElementById("choFieldsGroup");
+    const hospGroup = document.getElementById("hospitalFieldsGroup");
+    const bhwGroup = document.getElementById("bhwFieldsGroup");
+    const donorGroup = document.getElementById("donorFieldsGroup");
+
+    choGroup.style.display = "none";
+    hospGroup.style.display = "none";
+    bhwGroup.style.display = "none";
+    donorGroup.style.display = "none";
+
+    if (role === "1") choGroup.style.display = "block";
+    else if (role === "2") hospGroup.style.display = "block";
+    else if (role === "3") bhwGroup.style.display = "block";
+    else if (role === "4") donorGroup.style.display = "block";
 }
 
+// REGISTER ACCOUNT HANDLER
 function handleStaffRegister(e) {
     e.preventDefault();
     const roleVal = document.getElementById("staffRegRole").value;
@@ -116,11 +183,37 @@ function handleStaffRegister(e) {
     const passVal = document.getElementById("staffRegPass").value;
 
     const newUserId = state.accounts.length + 1;
-    const roleNames = { "1": "CHO Admin", "2": "Hospital Staff", "3": "BHW", "4": "Volunteer Blood Donor" };
+    let profileRecord = {};
 
-    if (roleVal === "4") {
+    if (roleVal === "1") {
+        profileRecord = {
+            admin_id: state.accounts.length + 100,
+            FIR_name: document.getElementById("choFirName").value,
+            LST_name: document.getElementById("choLstName").value,
+            USERS_UserID: newUserId
+        };
+    } else if (roleVal === "2") {
+        profileRecord = {
+            Hospital_id: state.accounts.length + 500,
+            Hospital_name: document.getElementById("hospName").value,
+            ADD: document.getElementById("hospAdd").value,
+            CTT_number: document.getElementById("hospCttNumber").value,
+            USERS_UserID: newUserId,
+            BARANGAY_BarangayID: parseInt(document.getElementById("hospBarangayId").value)
+        };
+    } else if (roleVal === "3") {
+        profileRecord = {
+            bhw_id: state.accounts.length + 800,
+            FIR_name: document.getElementById("bhwFirName").value,
+            LST_name: document.getElementById("bhwLstName").value,
+            CTT_number: document.getElementById("bhwCttNumber").value,
+            USERS_UserID: newUserId,
+            BARANGAY_BarangayID: parseInt(document.getElementById("bhwBarangayId").value)
+        };
+    } else if (roleVal === "4") {
+        const newDonorId = state.donors.length + 10;
         const donorObj = {
-            donor_id: state.donors.length + 10,
+            donor_id: newDonorId,
             FIR_name: document.getElementById("selfDonorFirName").value,
             MID_NAME: document.getElementById("selfDonorMidName").value,
             LST_name: document.getElementById("selfDonorLstName").value,
@@ -138,15 +231,34 @@ function handleStaffRegister(e) {
             username: userVal
         };
         state.donors.push(donorObj);
+        profileRecord = donorObj;
     }
 
-    state.accounts.push({ UserID: newUserId, Username: userVal, Password: passVal, ROLES_RoleID: roleVal, roleName: roleNames[roleVal], active: true });
+    const roleNames = {
+        "1": "City Health Office Admin",
+        "2": "Hospital Staff",
+        "3": "Barangay Health Worker",
+        "4": "Volunteer Blood Donor"
+    };
+
+    state.accounts.push({
+        UserID: newUserId,
+        Username: userVal,
+        Password: passVal,
+        ROLES_RoleID: roleVal,
+        roleName: roleNames[roleVal],
+        entityData: profileRecord,
+        active: true
+    });
+
     alert(`Account created successfully for ${userVal}!`);
     document.getElementById("staffRegisterModal").style.display = "none";
     document.getElementById("formStaffRegister").reset();
+    toggleRoleFormFields();
     renderUsersTable();
 }
 
+// DASHBOARD MENU BUILDER
 function renderHeaderAndMenu() {
     const roleBadge = document.getElementById("roleBadge");
     const welcomeMsg = document.getElementById("welcomeUserMsg");
@@ -176,6 +288,7 @@ function renderHeaderAndMenu() {
         addMenuItem("matched", "Matched Donors List", "viewMatchedDonors");
         addMenuItem("drives", "Manage Blood Drives", "viewDrives");
         addMenuItem("users", "Manage User Accounts", "viewUsers");
+        addMenuItem("bell", "Manage Notifications", "viewManageNotifications");
         addMenuItem("reports", "Generate Reports", "viewReports");
     } else if (state.currentRole === "2") {
         roleName = "Hospital Staff"; badgeClass = "role-hospital";
@@ -184,6 +297,7 @@ function renderHeaderAndMenu() {
     } else if (state.currentRole === "3") {
         roleName = "BHW"; badgeClass = "role-bhw";
         addMenuItem("donors", "Donor Status & Register", "viewDonors");
+        addMenuItem("matched", "View Qualified Donor List", "viewMatchedDonors");
         addMenuItem("drives", "Blood Drive Schedule", "viewDrives");
     } else if (state.currentRole === "4") {
         roleName = "Volunteer Donor"; badgeClass = "role-donor";
@@ -192,6 +306,7 @@ function renderHeaderAndMenu() {
     }
 
     sidebar.querySelector("li")?.classList.add("active");
+
     roleBadge.className = `badge badge-role ${badgeClass}`;
     roleBadge.innerText = roleName;
     welcomeMsg.innerText = `Logged in: ${state.currentUser}`;
@@ -207,12 +322,14 @@ function switchView(viewId) {
     if (viewId === "viewDrives") renderDrivesTable();
     if (viewId === "viewUsers") renderUsersTable();
     if (viewId === "viewMyProfile") renderMyProfile();
+    if (viewId === "viewManageNotifications") renderManageNotifications();
 
     document.getElementById("btnBhwRegisterDonor").style.display = (state.currentRole === "3") ? "inline-flex" : "none";
     document.getElementById("btnReqModuleAdd").style.display = (state.currentRole === "2") ? "inline-flex" : "none";
     document.getElementById("btnDriveModuleAdd").style.display = (state.currentRole === "1" || state.currentRole === "3") ? "inline-flex" : "none";
 }
 
+// BHW ASSISTED REGISTRATION
 function handleBhwRegister(e) {
     e.preventDefault();
     const newUserId = state.accounts.length + 1;
@@ -248,12 +365,17 @@ function handleBhwRegister(e) {
     renderDonorsTable();
 }
 
+// EMERGENCY BLOOD REQUEST & SYSTEM MATCH ENGINE
 function handleEmergencyRequest(e) {
     e.preventDefault();
     const newReqId = state.requests.length + 100;
     const bloodTypeId = document.getElementById("reqBloodType").value;
-    const barangayField = document.getElementById("reqBarangay");
-    const barangayId = barangayField ? barangayField.value : "0";
+
+    // ERD: EMG_Blood_REQ has no barangay column — location context comes from the
+    // requesting Hospital_STF record (Hospital_STF.BARANGAY_BarangayID), not a form field.
+    const hospitalAccount = getCurrentAccount();
+    const hospitalRecord = (hospitalAccount && hospitalAccount.entityData) ? hospitalAccount.entityData : null;
+    const hospitalId = hospitalRecord ? hospitalRecord.Hospital_id : null;
 
     const req = {
         REQ_id: newReqId,
@@ -262,28 +384,62 @@ function handleEmergencyRequest(e) {
         REQ_DTE: document.getElementById("reqDate").value,
         REQ_STU: "Matching Active",
         BLOOD_TYPE_BloodTypeID: bloodTypeId,
-        BARANGAY_BarangayID: barangayId,
-        Hospital_STF_Hospital_id: 501
+        Hospital_STF_Hospital_id: hospitalId
     };
 
     state.requests.push(req);
     state.latestRequestBloodTypeId = bloodTypeId;
-    state.latestRequestBarangayId = (barangayId && barangayId !== "0") ? barangayId : null;
+    state.latestRequestBarangayId = hospitalRecord ? String(hospitalRecord.BARANGAY_BarangayID) : null;
 
-    alert(`Emergency Request Created for ${bloodTypeMap[bloodTypeId]}!`);
+    // System Engine: Check Blood Type -> Check Donor Availability -> [Match Found] / [No Match]
+    // Runs automatically the moment a request is filed, per the Activity Diagram's decision branch.
+    const qualifiedCount = state.donors.filter(d =>
+        d.verificationStatus === "Verified" && d.AVB_STU === "Available" && d.BLOOD_TYPE_BloodTypeID === bloodTypeId
+    ).length;
+
+    let barangayNote = state.latestRequestBarangayId ? ` near ${barangayMap[state.latestRequestBarangayId]}` : "";
+
+    if (qualifiedCount === 0) {
+        req.REQ_STU = "No Match Found";
+
+        // Send No Match Alert — notifies the requesting Hospital Staff's own USERS row
+        state.notifications.push({
+            NotificationID: state.notifications.length + 1000,
+            Message: `No qualified donors found for Blood Type ${bloodTypeMap[bloodTypeId]} at this time. The system will keep matching as new donors become verified or available.`,
+            SentDate: new Date().toISOString().split('T')[0],
+            USERS_UserID: hospitalAccount ? hospitalAccount.UserID : null
+        });
+
+        alert(`No Match Alert: No qualified donors found for Blood Type ${bloodTypeMap[bloodTypeId]}${barangayNote} right now. Request has been logged as "No Match Found".`);
+    } else {
+        alert(`Emergency Blood Request Saved! System Engine found ${qualifiedCount} qualified donor(s) for Blood Type: ${bloodTypeMap[bloodTypeId]}${barangayNote}`);
+    }
+
     document.getElementById("requestModal").style.display = "none";
     document.getElementById("formEmergencyRequest").reset();
+
     switchView("viewMatchedDonors");
 }
 
+// BLOOD DRIVE CREATION
 function handleBloodDrive(e) {
     e.preventDefault();
+
+    // ERD: Blood_Drive.CIT_Health_OFF_ADM_admin_id (FK) -> CIT_Health_OFF_ADM.admin_id
+    // Only populated when a CHO Admin schedules the drive (the entity this FK is tied to in the ERD)
+    const actingAccount = getCurrentAccount();
+    const adminId = (actingAccount && actingAccount.ROLES_RoleID === "1" && actingAccount.entityData)
+        ? actingAccount.entityData.admin_id
+        : null;
+
     const drive = {
         Blood_Drive_id: state.drives.length + 300,
         EVT_name: document.getElementById("driveEvent").value,
         LOC: document.getElementById("driveVenue").value,
         SHD: document.getElementById("driveDate").value,
-        BARANGAY_BarangayID: document.getElementById("driveBarangay").value
+        STU: "Scheduled",
+        BARANGAY_BarangayID: document.getElementById("driveBarangay").value,
+        CIT_Health_OFF_ADM_admin_id: adminId
     };
 
     state.drives.push(drive);
@@ -293,6 +449,7 @@ function handleBloodDrive(e) {
     renderDrivesTable();
 }
 
+// RENDER TABLES & VERIFICATION ACTION
 function renderDonorsTable() {
     const tbody = document.getElementById("donorTableBody");
     tbody.innerHTML = "";
@@ -327,17 +484,20 @@ function renderDonorsTable() {
     });
 }
 
+// ER: DONOR_VERIFICATION — CHO Admin verifies a donor record; keeps an audit trail
 function verifyDonor(id) {
     const donor = state.donors.find(d => d.donor_id === id);
     if (donor) {
         donor.verificationStatus = "Verified";
 
-        const admin = state.accounts.find(a => a.Username === state.currentUser);
+        // FK per ERD is DONOR_VERIFICATION.CIT_Health_OFF_ADM_admin_id -> CIT_Health_OFF_ADM.admin_id (not USERS.UserID)
+        const admin = getCurrentAccount();
+        const adminId = (admin && admin.entityData) ? admin.entityData.admin_id : null;
         state.donorVerifications.push({
             VerificationID: state.donorVerifications.length + 1,
             VerificationStatus: "Verified",
             VerificationDate: new Date().toISOString().split('T')[0],
-            CIT_Health_OFF_ADM_admin_id: admin ? admin.UserID : null,
+            CIT_Health_OFF_ADM_admin_id: adminId,
             Volunteer_Blood_donor_donor_id: id
         });
 
@@ -346,30 +506,32 @@ function verifyDonor(id) {
     }
 }
 
+// RENDER EMERGENCY REQUESTS, HOSPITAL NOTIFICATIONS & PENDING DONATION CONFIRMATIONS
 function renderRequestsTable() {
     const tbody = document.getElementById("requestTableBody");
     const container = document.getElementById("viewRequests");
     tbody.innerHTML = "";
 
+    // Render Accept & No-Match Notifications for Hospital Staff — filtered via NOTIFICATION.USERS_UserID FK
     let hospNotifHTML = "";
     if (state.currentRole === "2") {
-        const staffNotifs = state.notifications.filter(n => n.targetRole === "Hospital Staff");
+        const myAccount = getCurrentAccount();
+        const staffNotifs = myAccount ? state.notifications.filter(n => n.USERS_UserID === myAccount.UserID) : [];
         if (staffNotifs.length > 0) {
             hospNotifHTML = `
-                <div style="margin-bottom: 20px;">
-                    <h3 style="color:var(--teal); margin-bottom:10px; font-size:0.95rem; display:flex; align-items:center; gap:8px;">
-                        <svg class="icon" viewBox="0 0 24 24" width="17" height="17"><path d="M18 8a6 6 0 0 0-12 0c0 5.5-2 7-2 7h16s-2-1.5-2-7"/><path d="M10.5 19a1.7 1.7 0 0 0 3 0"/></svg>
-                        Hospital Notifications & System Alerts
-                    </h3>
-                    ${staffNotifs.map(n => `
-                        <div class="notice ${n.status === 'No Match Found' ? 'notice-warning' : 'notice-success'}">
-                            <svg class="icon" viewBox="0 0 24 24"><path d="M4.5 12.5 9.5 17.5 19.5 6.5"/></svg>
-                            <div>
-                                <strong>${n.status === 'No Match Found' ? 'SYSTEM ALERT' : 'MATCH CONFIRMED'}:</strong> ${n.Message}
-                                <small>Date: ${n.SentDate}</small>
-                            </div>
-                        </div>
-                    `).join('')}
+                <div style="margin-bottom: 20px; display:flex; flex-direction:column; gap:8px;">
+                    ${staffNotifs.map(n => {
+                        const isNoMatch = n.Message.startsWith("No qualified donors found");
+                        return isNoMatch
+                            ? `<div class="notice notice-warning">
+                                    <svg class="icon" viewBox="0 0 24 24"><path d="M12 3.5 2 20.5h20L12 3.5Z"/><path d="M12 10v4.2M12 17.2h.01"/></svg>
+                                    <div><strong>NO MATCH ALERT:</strong> ${n.Message}<small>Date: ${n.SentDate}</small></div>
+                               </div>`
+                            : `<div class="notice notice-success">
+                                    <svg class="icon" viewBox="0 0 24 24"><path d="M4.5 12.5 9.5 17.5 19.5 6.5"/></svg>
+                                    <div><strong>MATCH CONFIRMED:</strong> ${n.Message}<small>Date Accepted: ${n.SentDate}</small></div>
+                               </div>`;
+                    }).join('')}
                 </div>
             `;
         }
@@ -387,21 +549,24 @@ function renderRequestsTable() {
         tbody.innerHTML = `<tr class="empty-row"><td colspan="8">No emergency requests available.</td></tr>`;
     } else {
         state.requests.forEach(r => {
-            const barangayLabel = (r.BARANGAY_BarangayID && r.BARANGAY_BarangayID !== "0")
-                ? (barangayMap[r.BARANGAY_BarangayID] || 'Barangay ' + r.BARANGAY_BarangayID)
-                : 'Any Barangay';
+            // Hospital Barangay is not a column on EMG_Blood_REQ — resolved via Hospital_STF_Hospital_id -> Hospital_STF.BARANGAY_BarangayID
+            const hospitalAcc = getAccountByHospitalId(r.Hospital_STF_Hospital_id);
+            const hospitalBarangayId = hospitalAcc && hospitalAcc.entityData ? hospitalAcc.entityData.BARANGAY_BarangayID : null;
+            const barangayLabel = hospitalBarangayId ? (barangayMap[hospitalBarangayId] || 'Barangay ' + hospitalBarangayId) : 'Unknown';
+            const statusBadgeClass = r.REQ_STU === "No Match Found" ? "role-bhw" : "role-admin";
             tbody.innerHTML += `
                 <tr>
-                    <td>${r.REQ_id}</td><td>${r.patient_name}</td><td>${r.Hospital_STF_Hospital_id}</td>
+                    <td>${r.REQ_id}</td><td>${r.patient_name}</td><td>${r.Hospital_STF_Hospital_id ?? '-'}</td>
                     <td><span class="blood-type-tag">${bloodTypeMap[r.BLOOD_TYPE_BloodTypeID]}</span></td>
                     <td>${barangayLabel}</td>
                     <td>${r.QTY_NDD} Bag(s)</td>
-                    <td>${r.REQ_DTE}</td><td><span class="badge role-admin">${r.REQ_STU}</span></td>
+                    <td>${r.REQ_DTE}</td><td><span class="badge ${statusBadgeClass}">${r.REQ_STU}</span></td>
                 </tr>
             `;
         });
     }
 
+    // Pending Donation Confirmations — Hospital Staff confirms a donor's completed donation
     const donationCard = document.getElementById("donationConfirmCard");
     const pendingBody = document.getElementById("pendingDonationsBody");
     if (donationCard && pendingBody) {
@@ -438,7 +603,6 @@ function renderRequestsTable() {
     }
 }
 
-// SYSTEM ENGINE MATCHING & DECISION NODE IMPLEMENTATION
 function renderMatchedDonorsTable() {
     const tbody = document.getElementById("matchedDonorTableBody");
     const tag = document.getElementById("matchedFilterTag");
@@ -458,32 +622,13 @@ function renderMatchedDonorsTable() {
         matched = matched.filter(d => d.BARANGAY_BarangayID === state.latestRequestBarangayId);
         tagText += ` · Same Barangay: ${barangayMap[state.latestRequestBarangayId]}`;
     } else if (state.latestRequestBarangayId) {
-        tagText += ` · Preferred Barangay: ${barangayMap[state.latestRequestBarangayId]}`;
+        tagText += ` · Hospital Barangay: ${barangayMap[state.latestRequestBarangayId]}`;
     }
 
     if (tag) tag.innerText = tagText;
 
-    // ACTIVITY DIAGRAM: Decision Node [No Match] -> Send No Match Alert to Hospital Staff
     if (matched.length === 0) {
         tbody.innerHTML = `<tr class="empty-row"><td colspan="8">No matched donors found. Check if donors are verified by CHO Admin.</td></tr>`;
-        
-        if (state.latestRequestBloodTypeId) {
-            const latestReq = state.requests[state.requests.length - 1];
-            const hasExistingNoMatchAlert = state.notifications.some(n => 
-                n.status === "No Match Found" && n.Message.includes(`Request #${latestReq ? latestReq.REQ_id : ''}`)
-            );
-
-            if (!hasExistingNoMatchAlert && latestReq) {
-                state.notifications.push({
-                    NotificationID: state.notifications.length + 1000,
-                    targetUser: "Hospital Staff",
-                    targetRole: "Hospital Staff",
-                    Message: `SYSTEM ALERT: No matching verified and available donors found for Emergency Request #${latestReq.REQ_id} (${bloodTypeMap[latestReq.BLOOD_TYPE_BloodTypeID]}).`,
-                    SentDate: new Date().toISOString().split('T')[0],
-                    status: "No Match Found"
-                });
-            }
-        }
         return;
     }
 
@@ -509,17 +654,21 @@ function renderMatchedDonorsTable() {
     });
 }
 
+// ER: donor_Match — a match record is created the moment an alert is dispatched to a donor
+// ER: NOTIFICATION.USERS_UserID (FK) — notification targets the donor's USERS row, not a plain username string
 function sendNotificationToDonor(donorId, donorUsername, donorName) {
     const latestReq = state.requests[state.requests.length - 1];
     if (!latestReq) return;
 
+    const donor = state.donors.find(d => d.donor_id === donorId);
+    if (!donor) return;
+
     state.notifications.push({
         NotificationID: state.notifications.length + 1000,
-        targetUser: donorUsername,
-        targetRole: "Volunteer Blood Donor",
         Message: `EMERGENCY ALERT: Patient ${latestReq.patient_name} requires ${bloodTypeMap[latestReq.BLOOD_TYPE_BloodTypeID]} blood urgently.`,
         SentDate: new Date().toISOString().split('T')[0],
-        status: "Pending Response"
+        USERS_UserID: donor.USERS_UserID,
+        _linkedReqId: latestReq.REQ_id  // app-level helper only, not a NOTIFICATION column — used to locate the related donor_Match row
     });
 
     state.donorMatches.push({
@@ -534,17 +683,28 @@ function sendNotificationToDonor(donorId, donorUsername, donorName) {
     alert(`Emergency notification sent to donor: ${donorName}!`);
 }
 
+// DONOR PORTAL & DECISION RESPONSE (ACCEPT/DECLINE WITH HOSPITAL NOTIFICATION)
 function renderMyProfile() {
     const notifContainer = document.getElementById("donorNotificationsContainer");
     const profileContainer = document.getElementById("myProfileContent");
 
-    const myNotifs = state.notifications.filter(n => n.targetUser === state.currentUser);
+    const myAccount = getCurrentAccount();
+    const myDonorRecord = state.donors.find(d => d.username === state.currentUser);
+
+    // ER: NOTIFICATION.USERS_UserID (FK) — this donor's own USERS row, not a plain username match
+    const myNotifs = myAccount ? state.notifications.filter(n => n.USERS_UserID === myAccount.UserID) : [];
 
     if (myNotifs.length === 0) {
         notifContainer.innerHTML = `<p style="color:var(--ink-faint);">No pending emergency blood requests right now.</p>`;
     } else {
         notifContainer.innerHTML = "";
         myNotifs.forEach(n => {
+            // NOTIFICATION has no status column per ERD — response state lives on the related donor_Match.RSO
+            const relatedMatch = myDonorRecord ? state.donorMatches.find(m =>
+                m.EMG_Blood_REQ_REQ_id === n._linkedReqId && m.Volunteer_Blood_donor_donor_id === myDonorRecord.donor_id
+            ) : null;
+            const rso = relatedMatch ? relatedMatch.RSO : "Pending";
+
             notifContainer.innerHTML += `
                 <div class="notice notice-warning" style="flex-direction:column; align-items:stretch;">
                     <div style="display:flex; gap:10px; align-items:flex-start;">
@@ -552,10 +712,10 @@ function renderMyProfile() {
                         <div>
                             <strong>Emergency Request Alert ID: ${n.NotificationID}</strong>
                             <p style="margin-top:4px;">${n.Message}</p>
-                            <p style="margin-top:6px;"><strong>Date Sent:</strong> ${n.SentDate} &nbsp;|&nbsp; <strong>Status:</strong> <span class="badge role-bhw">${n.status}</span></p>
+                            <p style="margin-top:6px;"><strong>Date Sent:</strong> ${n.SentDate} &nbsp;|&nbsp; <strong>Status:</strong> <span class="badge role-bhw">${rso}</span></p>
                         </div>
                     </div>
-                    ${n.status === 'Pending Response' ? `
+                    ${rso === 'Pending' ? `
                         <div style="margin-top:12px; display:flex; gap:10px;">
                             <button onclick="respondToRequest(${n.NotificationID}, 'Accepted')" class="btn-icon-sm btn-accept">
                                 <svg class="icon" viewBox="0 0 24 24" width="13" height="13" stroke="white"><path d="M4.5 12.5 9.5 17.5 19.5 6.5"/></svg>
@@ -572,7 +732,7 @@ function renderMyProfile() {
         });
     }
 
-    const myData = state.donors.find(d => d.username === state.currentUser);
+    const myData = myDonorRecord;
     if (!myData) {
         profileContainer.innerHTML = `<p style="color:var(--ink-faint);">No active donor record connected to this username.</p>`;
         return;
@@ -580,6 +740,7 @@ function renderMyProfile() {
 
     const statusCls = myData.verificationStatus === 'Verified' ? 'verified' : 'pending';
 
+    // ER: BLOOD_DRIVE_PAR — drives this donor has joined
     const myParticipation = state.driveParticipation.filter(p => p.Volunteer_Blood_donor_donor_id === myData.donor_id);
     let participationHTML = `<p style="color:var(--ink-faint); margin-top:14px; font-size:0.85rem;">You haven't joined any blood drives yet.</p>`;
     if (myParticipation.length > 0) {
@@ -600,24 +761,85 @@ function renderMyProfile() {
             <div class="profile-detail"><div class="label">Full Name</div><div class="value">${myData.FIR_name} ${myData.LST_name}</div></div>
             <div class="profile-detail"><div class="label">Blood Type</div><div class="value"><span class="blood-type-tag">${bloodTypeMap[myData.BLOOD_TYPE_BloodTypeID]}</span></div></div>
             <div class="profile-detail"><div class="label">Verification Status</div><div class="value"><span class="status-pill ${statusCls}">${myData.verificationStatus}</span></div></div>
-            <div class="profile-detail"><div class="label">Availability Status</div><div class="value">${myData.AVB_STU}</div></div>
+            <div class="profile-detail">
+                <div class="label">Availability Status</div>
+                <div class="value" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                    <span>${myData.AVB_STU}</span>
+                    ${myData.AVB_STU === "Reserved / Donating"
+                        ? `<span class="joined-tag">Locked during active match</span>`
+                        : `<button onclick="toggleDonorAvailability()" class="btn-icon-sm ${myData.AVB_STU === 'Available' ? 'btn-toggle-off' : 'btn-toggle-on'}" style="font-size:0.7rem; padding:5px 10px;">
+                                ${myData.AVB_STU === 'Available' ? 'Mark Unavailable' : 'Mark Available'}
+                           </button>`
+                    }
+                </div>
+            </div>
             <div class="profile-detail"><div class="label">Barangay</div><div class="value">${barangayMap[myData.BARANGAY_BarangayID] || 'Barangay ' + myData.BARANGAY_BarangayID}</div></div>
-        </div>
-        <div style="margin-top:15px;">
-            <button onclick="openUpdateProfileModal()" class="btn-icon-sm btn-edit">Update Profile Details</button>
+            <div class="profile-detail"><div class="label">Contact</div><div class="value" style="font-size:0.85rem;">${myData.phone_number}<br>${myData.email}</div></div>
         </div>
         <h4 style="margin-top:20px; font-size:0.85rem; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em;">My Blood Drive Participation</h4>
         ${participationHTML}
     `;
 }
 
+// Use Case: Donor Profile Update -> Update Personal Details — pre-fill and open the edit modal
+function openEditDonorProfile() {
+    const donor = state.donors.find(d => d.username === state.currentUser);
+    if (!donor) {
+        alert("No active donor record connected to this account.");
+        return;
+    }
+    document.getElementById("editProfileFirName").value = donor.FIR_name || "";
+    document.getElementById("editProfileMidName").value = donor.MID_NAME || "";
+    document.getElementById("editProfileLstName").value = donor.LST_name || "";
+    document.getElementById("editProfilePhone").value = donor.phone_number || "";
+    document.getElementById("editProfileEmail").value = donor.email || "";
+    document.getElementById("editProfileAdd").value = donor.ADD || "";
+    document.getElementById("editProfileBarangay").value = donor.BARANGAY_BarangayID || "1";
+    document.getElementById("editDonorProfileModal").style.display = "flex";
+}
+
+// Use Case: Donor Profile Update -> Update Personal Details — save changes to Volunteer_Blood_donor
+function handleEditDonorProfile(e) {
+    e.preventDefault();
+    const donor = state.donors.find(d => d.username === state.currentUser);
+    if (!donor) return;
+
+    donor.FIR_name = document.getElementById("editProfileFirName").value;
+    donor.MID_NAME = document.getElementById("editProfileMidName").value;
+    donor.LST_name = document.getElementById("editProfileLstName").value;
+    donor.phone_number = document.getElementById("editProfilePhone").value;
+    donor.email = document.getElementById("editProfileEmail").value;
+    donor.ADD = document.getElementById("editProfileAdd").value;
+    donor.BARANGAY_BarangayID = document.getElementById("editProfileBarangay").value;
+
+    alert("Personal details updated successfully!");
+    document.getElementById("editDonorProfileModal").style.display = "none";
+    renderMyProfile();
+}
+
+// Use Case: Donor Profile Update -> Update Availability Status
+function toggleDonorAvailability() {
+    const donor = state.donors.find(d => d.username === state.currentUser);
+    if (!donor) return;
+
+    if (donor.AVB_STU === "Reserved / Donating") {
+        alert("Availability is locked while a donation match is in progress.");
+        return;
+    }
+
+    donor.AVB_STU = donor.AVB_STU === "Available" ? "Not Available" : "Available";
+    alert(`Availability status updated to: ${donor.AVB_STU}`);
+    renderMyProfile();
+}
+
 function respondToRequest(notifId, choice) {
     const notif = state.notifications.find(n => n.NotificationID === notifId);
     if (notif) {
-        notif.status = choice;
+        // NOTIFICATION has no status column per ERD — the response itself lives on donor_Match.RSO instead
 
         const donor = state.donors.find(d => d.username === state.currentUser);
 
+        // Update the matching donor_Match record (most recent Pending match for this donor)
         const matchRecord = [...state.donorMatches].reverse().find(m =>
             donor && m.Volunteer_Blood_donor_donor_id === donor.donor_id && m.RSO === "Pending"
         );
@@ -631,6 +853,7 @@ function respondToRequest(notifId, choice) {
                 matchRecord.donation_STU = "Pending Confirmation";
             }
 
+            // Record Donation — awaits Hospital Staff confirmation
             state.donations.push({
                 donation_id: state.donations.length + 1,
                 donor_id: donor.donor_id,
@@ -639,13 +862,15 @@ function respondToRequest(notifId, choice) {
                 status: "Pending Confirmation"
             });
 
+            // DISPATCH NOTIFICATION TO HOSPITAL STAFF — resolved via EMG_Blood_REQ.Hospital_STF_Hospital_id -> Hospital_STF -> USERS_UserID
+            const relatedReq = state.requests.find(r => r.REQ_id === (matchRecord ? matchRecord.EMG_Blood_REQ_REQ_id : null));
+            const hospitalAcc = relatedReq ? getAccountByHospitalId(relatedReq.Hospital_STF_Hospital_id) : null;
+
             state.notifications.push({
                 NotificationID: state.notifications.length + 1000,
-                targetUser: "Hospital Staff",
-                targetRole: "Hospital Staff",
                 Message: `Donor ${donor.FIR_name} ${donor.LST_name} (${bloodTypeMap[donor.BLOOD_TYPE_BloodTypeID]}) has ACCEPTED the emergency blood request! Contact: ${donor.phone_number}`,
                 SentDate: new Date().toISOString().split('T')[0],
-                status: "Accepted Alert"
+                USERS_UserID: hospitalAcc ? hospitalAcc.UserID : null
             });
 
             alert(`Thank you! Response submitted as ACCEPTED. Hospital Staff will confirm your donation once completed.`);
@@ -662,6 +887,7 @@ function respondToRequest(notifId, choice) {
     }
 }
 
+// ER: Blood_Drive_PAR-linked confirmation — Hospital Staff confirms a donor's completed donation
 function confirmDonation(donationId) {
     const donation = state.donations.find(dn => dn.donation_id === donationId);
     if (!donation) return;
@@ -679,10 +905,22 @@ function confirmDonation(donationId) {
     );
     if (matchRecord) matchRecord.donation_STU = "Completed";
 
+    // Activity Diagram: Send Confirmation Notification -> Manage Notifications (CHO Admin)
+    const adminAccount = state.accounts.find(a => a.ROLES_RoleID === "1");
+    if (adminAccount && donor) {
+        state.notifications.push({
+            NotificationID: state.notifications.length + 1000,
+            Message: `Donation #${donationId} by ${donor.FIR_name} ${donor.LST_name} (${bloodTypeMap[donor.BLOOD_TYPE_BloodTypeID]}) has been confirmed by Hospital Staff.`,
+            SentDate: new Date().toISOString().split('T')[0],
+            USERS_UserID: adminAccount.UserID
+        });
+    }
+
     alert(`Donation #${donationId} confirmed. Donor availability has been updated.`);
     renderRequestsTable();
 }
 
+// ER: Blood_Drive_PAR — donor signs up for a scheduled community blood drive
 function joinBloodDrive(driveId) {
     const donor = state.donors.find(d => d.username === state.currentUser);
     if (!donor) {
@@ -733,16 +971,28 @@ function renderDrivesTable() {
                         <svg class="icon" viewBox="0 0 24 24" width="13" height="13" stroke="white"><path d="M12 5v14M5 12h14"/></svg>
                         Join Drive
                    </button>`;
+        } else if (state.currentRole === "1" || state.currentRole === "3") {
+            // Use Case: Manage Blood Drive -> Update Blood Drive (CHO Admin & BHW)
+            actionCell = `<div style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
+                <span class="joined-tag">${participantCount} joined</span>
+                <button onclick="openEditDrive(${drv.Blood_Drive_id})" class="btn-icon-sm btn-edit">
+                    <svg class="icon" viewBox="0 0 24 24" width="13" height="13" stroke="white"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/></svg>
+                    Edit
+                </button>
+            </div>`;
         }
 
         tbody.innerHTML += `<tr>
-            <td>${drv.Blood_Drive_id}</td><td>${drv.EVT_name}</td><td>${drv.LOC}</td><td>${drv.SHD}</td>
+            <td>${drv.Blood_Drive_id}</td>
+            <td>${drv.EVT_name} <span class="status-pill verified" style="margin-left:6px;">${drv.STU || 'Scheduled'}</span></td>
+            <td>${drv.LOC}</td><td>${drv.SHD}</td>
             <td>${barangayMap[drv.BARANGAY_BarangayID] || 'Barangay ' + drv.BARANGAY_BarangayID}</td>
             <td>${actionCell}</td>
         </tr>`;
     });
 }
 
+// USER ACCOUNT CRUD (Manage User Accounts — CHO Admin only)
 function renderUsersTable() {
     const tbody = document.getElementById("userAccountTableBody");
     tbody.innerHTML = "";
@@ -796,12 +1046,10 @@ function handleEditUser(e) {
     const oldUsername = acc.Username;
     acc.Username = newUsername;
 
+    // Keep dependent records in sync — donor.username still mirrors USERS.Username for login lookup.
+    // NOTIFICATION references USERS_UserID (not username), so it stays correct automatically.
     const donorRecord = state.donors.find(d => d.username === oldUsername);
     if (donorRecord) donorRecord.username = newUsername;
-
-    state.notifications.forEach(n => {
-        if (n.targetUser === oldUsername) n.targetUser = newUsername;
-    });
 
     if (state.currentUser === oldUsername) state.currentUser = newUsername;
 
@@ -827,6 +1075,69 @@ function toggleUserStatus(userId) {
     renderUsersTable();
 }
 
+// Use Case: Manage Notifications (CHO Admin) — lists all NOTIFICATION rows targeted at the Admin's own USERS_UserID
+function renderManageNotifications() {
+    const container = document.getElementById("adminNotificationsContainer");
+    const myAccount = getCurrentAccount();
+    const myNotifs = myAccount ? state.notifications.filter(n => n.USERS_UserID === myAccount.UserID) : [];
+
+    if (myNotifs.length === 0) {
+        container.innerHTML = `<p style="color:var(--ink-faint);">No system notifications at this time.</p>`;
+        return;
+    }
+
+    container.innerHTML = [...myNotifs].reverse().map(n => `
+        <div class="notice notice-warning" style="align-items:center;">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 5.5-2 7-2 7h16s-2-1.5-2-7"/><path d="M10.5 19a1.7 1.7 0 0 0 3 0"/></svg>
+            <div style="flex:1;">
+                <strong>Notification #${n.NotificationID}</strong>
+                <p style="margin-top:2px;">${n.Message}</p>
+                <small>${n.SentDate}</small>
+            </div>
+            <button onclick="dismissAdminNotification(${n.NotificationID})" class="btn-icon-sm btn-decline">
+                <svg class="icon" viewBox="0 0 24 24" width="13" height="13" stroke="white"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                Dismiss
+            </button>
+        </div>
+    `).join('');
+}
+
+function dismissAdminNotification(notificationId) {
+    state.notifications = state.notifications.filter(n => n.NotificationID !== notificationId);
+    renderManageNotifications();
+}
+
+// Use Case: Manage Blood Drive -> Update Blood Drive
+function openEditDrive(driveId) {
+    const drive = state.drives.find(d => d.Blood_Drive_id === driveId);
+    if (!drive) return;
+    document.getElementById("editDriveId").value = drive.Blood_Drive_id;
+    document.getElementById("editDriveEvent").value = drive.EVT_name;
+    document.getElementById("editDriveVenue").value = drive.LOC;
+    document.getElementById("editDriveDate").value = drive.SHD;
+    document.getElementById("editDriveBarangay").value = drive.BARANGAY_BarangayID;
+    document.getElementById("editDriveStatus").value = drive.STU || "Scheduled";
+    document.getElementById("editDriveModal").style.display = "flex";
+}
+
+function handleEditDrive(e) {
+    e.preventDefault();
+    const driveId = parseInt(document.getElementById("editDriveId").value);
+    const drive = state.drives.find(d => d.Blood_Drive_id === driveId);
+    if (!drive) return;
+
+    drive.EVT_name = document.getElementById("editDriveEvent").value;
+    drive.LOC = document.getElementById("editDriveVenue").value;
+    drive.SHD = document.getElementById("editDriveDate").value;
+    drive.BARANGAY_BarangayID = document.getElementById("editDriveBarangay").value;
+    drive.STU = document.getElementById("editDriveStatus").value;
+
+    alert("Blood Drive updated successfully!");
+    document.getElementById("editDriveModal").style.display = "none";
+    renderDrivesTable();
+}
+
+// REPORT GENERATION ENGINE (DFD LEVEL 0 / USE CASE ALIGNED)
 function generateReport(type) {
     const out = document.getElementById("reportOutputContainer");
     const dateStr = new Date().toLocaleString();
@@ -855,31 +1166,4 @@ function generateReport(type) {
             <p><strong>Dispatched Notifications:</strong> ${state.notifications.length}</p>
         `;
     }
-}
-
-function openUpdateProfileModal() {
-    const donor = state.donors.find(d => d.username === state.currentUser);
-    if (!donor) return;
-
-    document.getElementById("editDonorPhone").value = donor.phone_number || "";
-    document.getElementById("editDonorEmail").value = donor.email || "";
-    document.getElementById("editDonorAdd").value = donor.ADD || "";
-    document.getElementById("editDonorAvail").value = donor.AVB_STU || "Available";
-
-    document.getElementById("updateProfileModal").style.display = "flex";
-}
-
-function handleUpdateProfile(e) {
-    e.preventDefault();
-    const donor = state.donors.find(d => d.username === state.currentUser);
-    if (!donor) return;
-
-    donor.phone_number = document.getElementById("editDonorPhone").value;
-    donor.email = document.getElementById("editDonorEmail").value;
-    donor.ADD = document.getElementById("editDonorAdd").value;
-    donor.AVB_STU = document.getElementById("editDonorAvail").value;
-
-    alert("Profile details and availability status updated successfully!");
-    document.getElementById("updateProfileModal").style.display = "none";
-    renderMyProfile();
 }
