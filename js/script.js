@@ -474,7 +474,8 @@ function renderDonorsTable() {
         tbody.innerHTML += `
             <tr>
                 <td>${d.donor_id}</td><td>${d.FIR_name}</td><td>${d.LST_name}</td><td>${d.SEX}</td>
-                <td>${d.phone_number}</td><td>${d.email}</td><td>${barangayMap[d.BARANGAY_BarangayID] || 'Barangay ' + d.BARANGAY_BarangayID}</td>
+                <td>${d.phone_number}</td><td>${d.email}</td>
+                <td>${d.ADD ? d.ADD + ', ' : ''}${barangayMap[d.BARANGAY_BarangayID] || 'Barangay ' + d.BARANGAY_BarangayID}</td>
                 <td><span class="blood-type-tag">${bloodTypeMap[d.BLOOD_TYPE_BloodTypeID]}</span></td>
                 <td><span class="badge ${d.verificationStatus === 'Verified' ? 'role-donor' : 'role-bhw'}">${d.verificationStatus}</span></td>
                 <td>${d.AVB_STU}</td>
@@ -773,6 +774,7 @@ function renderMyProfile() {
                     }
                 </div>
             </div>
+            <div class="profile-detail"><div class="label">Address</div><div class="value" style="font-size:0.9rem;">${myData.ADD || '-'}</div></div>
             <div class="profile-detail"><div class="label">Barangay</div><div class="value">${barangayMap[myData.BARANGAY_BarangayID] || 'Barangay ' + myData.BARANGAY_BarangayID}</div></div>
             <div class="profile-detail"><div class="label">Contact</div><div class="value" style="font-size:0.85rem;">${myData.phone_number}<br>${myData.email}</div></div>
         </div>

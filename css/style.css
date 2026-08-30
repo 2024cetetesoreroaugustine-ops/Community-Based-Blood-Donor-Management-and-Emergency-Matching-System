@@ -1734,3 +1734,41 @@ svg { display: block; }
 @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
 }
+
+/* ==========================================================================
+   FINAL FIX — DONOR PROFILE DETAILS ONE ROW LAYOUT
+   ========================================================================== */
+
+#viewMyProfile .profile-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(120px, 1fr));
+    gap: 12px;
+    width: 100%;
+}
+
+#viewMyProfile .profile-detail {
+    min-width: 0;
+    overflow: hidden;
+}
+
+#viewMyProfile .profile-detail .label {
+    white-space: nowrap;
+}
+
+#viewMyProfile .profile-detail .value {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 1200px) {
+    #viewMyProfile .profile-detail-grid {
+        grid-template-columns: repeat(4, minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    #viewMyProfile .profile-detail-grid {
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+    }
+}
